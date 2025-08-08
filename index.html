@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeteorX_ Minecraft Map Maker</title>
+<style>
+  /* Reset & basics */
+  * {
+    box-sizing: border-box;
+  }
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #e0f2fe 0%, #bae6fd 50%, #fff 100%);
+    color: #134e4a;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+  }
+  /* Loader styles */
+  #loader {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(to bottom, #0f172a, #000000cc);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    color: #d1fae5;
+    font-weight: 700;
+    text-align: center;
+    padding: 2rem;
+  }
+  .block-cube {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, #7bbf59, #5e8a3e);
+    border-radius: 8px;
+    animation: blockSpin 6s linear infinite;
+    margin-bottom: 1rem;
+    box-shadow:
+      inset 0 4px 0 rgba(255, 255, 255, 0.25),
+      0 8px 8px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+  .block-cube::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+  }
+  @keyframes blockSpin {
+    0% { transform: rotateX(0) rotateY(0) }
+    100% { transform: rotateX(360deg) rotateY(360deg) }
+  }
+  #loader h1 {
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem 0;
+    text-shadow: 0 0 10px #a3f7b5;
+  }
+  #loader p {
+    margin: 0 0 2rem 0;
+    font-weight: 400;
+    font-size: 1rem;
+    color: #a7f3d0;
+  }
+  .progress-bar {
+    width: 320px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    overflow: hidden;
+    box-shadow: 0 0 8px rgba(163, 247, 181, 0.6);
+    margin-bottom: 0.5rem;
+  }
+  .progress-bar > div {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(to right, #4ade80, #facc15);
+    border-radius: 9999px;
+    transition: width 0.3s ease-out;
+    box-shadow: 0 0 6px #a3f7b5;
+  }
+  #progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #a7f3d0;
+    font-weight: 600;
+    width: 320px;
+  }
+
+  /* Pixel particles */
+  .pixel-p {
+    position: fixed;
+    width: 8px; height: 8px;
+    border-radius: 1px;
+    opacity: 0.9;
+    animation: pixelfall 6s linear infinite;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    will-change: transform;
+    z-index: 1;
+  }
+  @keyframes pixelfall {
+    0% { transform: translateY(-10px) scale(1); opacity: 0 }
+    10% { opacity: 1 }
+    100% { transform: translateY(110vh) scale(0.6); opacity: 0 }
+  }
+
+  /* Magic cursor */
+  #magic-cursor {
+    position: fixed;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 30% 30%, rgba(140,255,180,0.95), rgba(30,115,75,0.15));
+    mix-blend-mode: screen;
+    transition: opacity 0.2s ease;
+    opacity: 0;
+  }
+  #magic-cursor.active {
+    opacity: 1;
+  }
+
+  /* Header & Navigation */
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(20, 83, 45, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 2px solid rgba(134, 239, 172, 0.3);
+    padding: 1rem 0;
+    transform: translateY(-100%);
+    transition: transform 0.5s ease;
+  }
+  header.visible {
+    transform: translateY(0);
+  }
+  
+  .header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #86efac;
+    font-weight: 900;
+    font-size: 1.5rem;
+    text-decoration: none;
+    text-shadow: 0 0 8px rgba(134, 239, 172, 0.6);
+  }
+  
+  .logo-cube {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(45deg, #7bbf59, #4ade80);
+    border-radius: 6px;
+    position: relative;
+    animation: logoFloat 3s ease-in-out infinite;
+    box-shadow: 
+      inset 0 2px 0 rgba(255, 255, 255, 0.3),
+      0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .logo-cube::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 3px;
+  }
+  
+  @keyframes logoFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(1deg); }
+  }
+
+  /* Bubble Navigation */
+  .bubble-nav {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(22, 163, 74, 0.15);
+    padding: 0.5rem;
+    border-radius: 50px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(134, 239, 172, 0.2);
+    box-shadow: 0 8px 25px rgba(22, 163, 74, 0.3);
+  }
+  
+  .nav-bubble {
+    position: relative;
+    padding: 0.7rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    color: #d1fae5;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    overflow: hidden;
+  }
+  
+  .nav-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+  }
+  
+  .nav-bubble:hover {
+    background: rgba(134, 239, 172, 0.2);
+    border-color: rgba(134, 239, 172, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 
+      0 6px 15px rgba(22, 163, 74, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    color: #86efac;
+  }
+  
+  .nav-bubble:hover::before {
+    left: 100%;
+  }
+  
+  .nav-bubble.active {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    border-color: #86efac;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+      0 4px 12px rgba(22, 163, 74, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /* Mobile menu toggle */
+  .mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: #86efac;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+  }
+  
+  .mobile-toggle:hover {
+    background: rgba(134, 239, 172, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .header-content {
+      padding: 0 1rem;
+    }
+    
+    .bubble-nav {
+      position: absolute;
+      top: 100%;
+      left: 1rem;
+      right: 1rem;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-top: 0.5rem;
+      opacity: 0;
+      transform: translateY(-10px);
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .bubble-nav.open {
+      opacity: 1;
+      transform: translateY(0);
+      visibility: visible;
+    }
+    
+    .mobile-toggle {
+      display: block;
+    }
+    
+    .nav-bubble {
+      text-align: center;
+      border-radius: 12px;
+    }
+  }
+
+  /* Main content */
+  main {
+    max-width: 960px;
+    margin: 140px auto 80px;
+    padding: 0 1rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    min-height: 70vh;
+  }
+  main.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1.1;
+    color: #16a34a;
+    text-shadow: 0 0 6px #a7f3d0;
+    margin-bottom: 0.6rem;
+  }
+  @media (max-width: 600px) {
+    h1 {
+      font-size: 2.2rem;
+    }
+  }
+  
+  p.subtitle {
+    font-weight: 500;
+    max-width: 600px;
+    margin-bottom: 2rem;
+    color: #065f46;
+    font-size: 1.1rem;
+    line-height: 1.5;
+  }
+
+  section.packages {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  @media (max-width: 700px) {
+    section.packages {
+      grid-template-columns: 1fr;
+    }
+  }
+  article.package-card {
+    background: #dcfce7;
+    border: 2px solid #86efac;
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 6px 15px rgba(22, 163, 74, 0.25);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+  article.package-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #86efac, #4ade80);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+  article.package-card:hover {
+    box-shadow: 0 8px 22px rgba(22, 163, 74, 0.5);
+    transform: translateY(-2px);
+  }
+  article.package-card:hover::before {
+    transform: scaleX(1);
+  }
+  article.package-card:focus {
+    outline: 2px solid #16a34a;
+    outline-offset: 2px;
+  }
+  article.package-card h3 {
+    font-size: 1.8rem;
+    color: #166534;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    user-select: text;
+  }
+  article.package-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    color: #14532d;
+    font-weight: 600;
+    font-size: 1.1rem;
+    user-select: text;
+  }
+  article.package-card ul li {
+    margin-bottom: 0.6rem;
+    padding-left: 1rem;
+    position: relative;
+  }
+  article.package-card ul li::before {
+    content: '■';
+    position: absolute;
+    left: 0;
+    color: #22c55e;
+    font-size: 0.8rem;
+    top: 0.1rem;
+  }
+
+  /* Super Detailed package - gold/yellow style */
+  article.package-card.super-detailed {
+    background: #fff7ed;
+    border-color: #fbbf24;
+    box-shadow: 0 6px 15px rgba(251, 191, 36, 0.3);
+  }
+  article.package-card.super-detailed::before {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  }
+  article.package-card.super-detailed:hover {
+    box-shadow: 0 8px 22px rgba(251, 191, 36, 0.6);
+  }
+  article.package-card.super-detailed h3 {
+    color: #92400e;
+  }
+  article.package-card.super-detailed ul {
+    color: #451a03;
+  }
+  article.package-card.super-detailed ul li::before {
+    color: #f59e0b;
+  }
+
+  /* Info note */
+  #info-note {
+    max-width: 960px;
+    margin: 2rem auto 4rem;
+    padding: 1rem 1.5rem;
+    background: #d9f99d;
+    border-left: 6px solid #84cc16;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #4d7c0f;
+    line-height: 1.6;
+  }
+
+  /* Button */
+  #contact-btn {
+    display: inline-block;
+    padding: 0.8rem 2.5rem;
+    background: linear-gradient(90deg, #22c55e, #bef264);
+    border-radius: 9999px;
+    font-weight: 800;
+    color: #14532d;
+    font-size: 1.2rem;
+    text-decoration: none;
+    box-shadow: 0 6px 12px rgba(139, 204, 15, 0.6);
+    transition: all 0.3s ease;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+  #contact-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+  }
+  #contact-btn:hover {
+    background: linear-gradient(90deg, #16a34a, #a3e635);
+    box-shadow: 0 8px 18px rgba(101, 163, 13, 0.9);
+    transform: translateY(-1px);
+  }
+  #contact-btn:hover::before {
+    left: 100%;
+  }
+  #contact-btn:active {
+    transform: scale(0.96) translateY(-1px);
+  }
+  #contact-btn:focus {
+    outline: 2px solid #16a34a;
+    outline-offset: 3px;
+  }
+
+  /* Loading states */
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Footer */
+  footer {
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: #d1fae5;
+    padding: 3rem 0 2rem;
+    margin-top: 4rem;
+    position: relative;
+    overflow: hidden;
+    border-top: 3px solid #22c55e;
+  }
+  
+  footer::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(
+      90deg,
+      #22c55e 0px,
+      #22c55e 20px,
+      #16a34a 20px,
+      #16a34a 40px
+    );
+    animation: pixelBorder 3s linear infinite;
+  }
+  
+  @keyframes pixelBorder {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(40px); }
+  }
+  
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2rem;
+  }
+  
+  @media (max-width: 768px) {
+    .footer-content {
+      grid-template-columns: 1fr;
+      text-align: center;
+      gap: 2.5rem;
+    }
+  }
+  
+  .footer-section h4 {
+    color: #86efac;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .footer-section h4::before {
+    content: '⬛';
+    color: #22c55e;
+    font-size: 0.8rem;
+  }
+  
+  .footer-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .footer-section ul li {
+    margin-bottom: 0.5rem;
+  }
+  
+  .footer-section ul li a {
+    color: #a7f3d0;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    padding: 0.3rem 0;
+    display: inline-block;
+  }
+  
+  .footer-section ul li a:hover {
+    color: #86efac;
+    transform: translateX(4px);
+    text-shadow: 0 0 8px rgba(134, 239, 172, 0.6);
+  }
+  
+  .footer-social {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  @media (max-width: 768px) {
+    .footer-social {
+      justify-content: center;
+    }
+  }
+  
+  .social-cube {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    border-radius: 12px;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    box-shadow: 
+      0 4px 8px rgba(22, 163, 74, 0.4),
+      inset 0 2px 0 rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .social-cube::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+  }
+  
+  .social-cube:hover {
+    transform: translateY(-3px) rotate(5deg);
+    box-shadow: 
+      0 8px 20px rgba(22, 163, 74, 0.6),
+      inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  }
+  
+  .footer-bottom {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(134, 239, 172, 0.3);
+    color: #a7f3d0;
+    font-weight: 500;
+  }
+  
+  .footer-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #86efac;
+    font-weight: 800;
+    margin-bottom: 1rem;
+  }
+  
+  .footer-logo-cube {
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(45deg, #7bbf59, #4ade80);
+    border-radius: 4px;
+    position: relative;
+    box-shadow: 
+      inset 0 2px 0 rgba(255, 255, 255, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .footer-logo-cube::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    right: 1px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+  }
+
+  /* Accessibility improvements */
+  @media (prefers-reduced-motion: reduce) {
+    .block-cube, .logo-cube {
+      animation: none;
+    }
+    .pixel-p {
+      animation: none;
+      opacity: 0;
+    }
+    footer::before {
+      animation: none;
+    }
+    * {
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="loader" aria-label="Laden van de pagina">
+  <div class="block-cube" aria-hidden="true"></div>
+  <h1>MeteorX_ Map Maker</h1>
+  <p>Minecraft World Painter & custom map builds — laad de magie...</p>
+  <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div></div>
+  </div>
+  <div id="progress-text"><span>Loading assets</span><span>0%</span></div>
+</div>
+
+<div id="magic-cursor" aria-hidden="true"></div>
+
+<header id="header">
+  <div class="header-content">
+    <a href="#" class="logo" aria-label="MeteorX Map Maker Home">
+      <div class="logo-cube" aria-hidden="true"></div>
+      <span>MeteorX_</span>
+    </a>
+    
+    <nav class="bubble-nav" id="nav-menu">
+      <a href="#home" class="nav-bubble active">🏠 Home</a>
+      <a href="#packages" class="nav-bubble">📦 Pakketten</a>
+      <a href="#gallery" class="nav-bubble">🖼️ Galerij</a>
+      <a href="#about" class="nav-bubble">ℹ️ Over Mij</a>
+      <a href="#contact" class="nav-bubble">✉️ Contact</a>
+    </nav>
+    
+    <button class="mobile-toggle" id="mobile-toggle" aria-label="Menu toggle">
+      ☰
+    </button>
+  </div>
+</header>
+
+<main id="main-content" tabindex="-1" aria-label="Minecraft map maker inhoud" hidden>
+  <h1>Custom Minecraft maps met een magische vibe</h1>
+  <p class="subtitle">Van simpele biomes tot super gedetailleerde werelden, volledig in jouw stijl. Kies hieronder een pakket of vraag een offerte aan voor maatwerk.</p>
+
+  <section class="packages" aria-label="Pakketten en prijzen">
+    <article class="package-card standard" tabindex="0" aria-labelledby="standaard-title">
+      <h3 id="standaard-title">Standaard Pakketten</h3>
+      <ul>
+        <li>1K = €10</li>
+        <li>2K = €20</li>
+        <li>4K = €45</li>
+        <li>8K = Vanaf €150</li>
+        <li>10K = Vanaf €170</li>
+        <li>15K = Vanaf €220</li>
+      </ul>
+    </article>
+
+    <article class="package-card super-detailed" tabindex="0" aria-labelledby="super-title">
+      <h3 id="super-title">Super Gedetailleerd</h3>
+      <ul>
+        <li>1K = €15</li>
+        <li>2K = €30</li>
+        <li>4K = €60</li>
+        <li>8K = Vanaf €200</li>
+        <li>10K = Vanaf €220</li>
+        <li>15K = Vanaf €350</li>
+        <li>20K+ = €500 of meer</li>
+      </ul>
+    </article>
+  </section>
+
+  <div id="info-note" role="note">
+    Over deze prijzen is natuurlijk altijd te discussiëren en het hangt af van de complexiteit van de map en de layout wat je wil.<br>
+    Houd er rekening mee dat bij mappen groter dan 8K het best lang kan duren voor je de map hebt (vooral bij de gedetailleerde).<br>
+    Bij 15K & 20K+ kun je rekenen op een paar maanden in plaats van weken!<br>
+    Mocht je meerdere mappen kopen dan kan er zeker wat met de prijzen gespeeld worden.<br>
+    Voor meer details maak een ticket aan en dan zal ik je helpen.<br>
+    Groetjes, MeteorX_
+  </div>
+
+  <a href="mailto:contact@meteorx.nl" id="contact-btn" role="button" aria-label="Maak een ticket aan via email">Maak een ticket aan</a>
+</main>
+
+<footer>
+  <div class="footer-content">
+    <div class="footer-section">
+      <div class="footer-logo">
+        <div class="footer-logo-cube" aria-hidden="true"></div>
+        <span>MeteorX_ Maps</span>
+      </div>
+      <p>Custom Minecraft werelden met een magische touch. Van simpele biomes tot complexe landschappen.</p>
+    </div>
+    
+    <div class="footer-section">
+      <h4>Services</h4>
+      <ul>
+        <li><a href="#packages">Standaard Pakketten</a></li>
+        <li><a href="#packages">Super Gedetailleerd</a></li>
+        <li><a href="#custom">Maatwerk Maps</a></li>
+        <li><a href="#world-painter">World Painter</a></li>
+        <li><a href="#terrain">Terrain Design</a></li>
+      </ul>
+    </div>
+    
+    <div class="footer-section">
+      <h4>Connect</h4>
+      <div class="footer-social">
+        <a href="#" class="social-cube" aria-label="Discord" title="Discord">D</a>
+        <a href="#" class="social-cube" aria-label="YouTube" title="YouTube">Y</a>
+        <a href="#" class="social-cube" aria-label="Twitter" title="Twitter">T</a>
+        <a href="mailto:contact@meteorx.nl" class="social-cube" aria-label="Email" title="Email">@</a>
+      </div>
+      <ul style="margin-top: 1rem;">
+        <li><a href="#support">Support & Help</a></li>
+        <li><a href="#faq">Veelgestelde Vragen</a></li>
+        <li><a href="#terms">Voorwaarden</a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="footer-bottom">
+    <p>&copy; 2025 MeteorX_ Map Maker. Alle rechten voorbehouden.</p>
+    <p>Handgemaakte Minecraft werelden met passie ⚡</p>
+  </div>
+</footer>
+
+<script>
+  // Check for reduced motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Pixel particles creation
+  const colors = ['#7cc576', '#d1c27b', '#9ad6ff', '#b06b3b', '#e6e6e6'];
+  if (!prefersReducedMotion) {
+    for(let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'pixel-p';
+      const size = 6 + Math.floor(Math.random() * 8);
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.left = (Math.random() * 100) + 'vw';
+      p.style.top = (-20 - Math.random() * 20) + 'vh';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.animationDelay = (Math.random() * -6) + 's';
+      p.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+      document.body.appendChild(p);
+    }
+  }
+
+  // Magic cursor movement with performance optimization
+  const cursor = document.getElementById('magic-cursor');
+  let isMoving = false;
+  let hideTimeout;
+
+  function updateCursor(e) {
+    if (!isMoving) {
+      cursor.classList.add('active');
+      isMoving = true;
+    }
+    
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+    
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      cursor.classList.remove('active');
+      isMoving = false;
+    }, 1000);
+  }
+
+  window.addEventListener('mousemove', updateCursor, { passive: true });
+
+  // Loader simulation with error handling
+  const loader = document.getElementById('loader');
+  const progressBar = loader.querySelector('.progress-bar > div');
+  const progressText = document.getElementById('progress-text').lastElementChild;
+  const progressBarContainer = loader.querySelector('.progress-bar');
+  const mainContent = document.getElementById('main-content');
+
+  let progress = 0;
+  const loadingSteps = [
+    'Loading assets',
+    'Preparing textures',
+    'Building worlds',
+    'Adding magic',
+    'Almost ready'
+  ];
+  let currentStep = 0;
+
+  const interval = setInterval(() => {
+    const increment = Math.floor(Math.random() * 7) + 3;
+    progress = Math.min(progress + increment, 100);
+    
+    // Update step text based on progress
+    const stepIndex = Math.floor((progress / 100) * loadingSteps.length);
+    if (stepIndex !== currentStep && stepIndex < loadingSteps.length) {
+      currentStep = stepIndex;
+      document.getElementById('progress-text').firstElementChild.textContent = loadingSteps[currentStep];
+    }
+    
+    // Update progress bar and text
+    progressBar.style.width = progress + '%';
+    progressBarContainer.setAttribute('aria-valuenow', progress);
+    progressText.textContent = progress + '%';
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+      progressText.textContent = '100%';
+      document.getElementById('progress-text').firstElementChild.textContent = 'Ready!';
+      
+      setTimeout(() => {
+        loader.style.opacity = '0';
+        loader.style.transition = 'opacity 0.5s ease';
+        
+        setTimeout(() => {
+          loader.style.display = 'none';
+          mainContent.hidden = false;
+          mainContent.classList.add('visible');
+          mainContent.focus();
+          
+          // Add staggered animation to cards
+          const cards = document.querySelectorAll('.package-card');
+          cards.forEach((card, index) => {
+            setTimeout(() => {
+              card.classList.add('fade-in');
+            }, index * 150);
+          });
+        }, 500);
+      }, 600);
+    }
+  }, 200);
+
+  // Error handling for failed loads
+  window.addEventListener('error', (e) => {
+    console.error('Error loading resource:', e);
+  });
+
+  // Keyboard navigation improvements
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      // Ensure focus is visible
+      document.body.classList.add('keyboard-navigation');
+    }
+  });
+
+  document.addEventListener('click', () => {
+    document.body.classList.remove('keyboard-navigation');
+  });
+
+  // Show header after loading
+  setTimeout(() => {
+    const header = document.getElementById('header');
+    header.classList.add('visible');
+  }, 1200);
+
+  // Mobile navigation toggle
+  const mobileToggle = document.getElementById('mobile-toggle');
+  const navMenu = document.getElementById('nav-menu');
+  
+  mobileToggle.addEventListener('click', () => {
+    navMenu.classList.toggle('open');
+    mobileToggle.textContent = navMenu.classList.contains('open') ? '✕' : '☰';
+  });
+
+  // Smooth scrolling and active nav updates
+  const navBubbles = document.querySelectorAll('.nav-bubble');
+  const sections = ['home', 'packages', 'gallery', 'about', 'contact'];
+
+  navBubbles.forEach((bubble, index) => {
+    bubble.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Update active state
+      navBubbles.forEach(b => b.classList.remove('active'));
+      bubble.classList.add('active');
+      
+      // Close mobile menu if open
+      navMenu.classList.remove('open');
+      mobileToggle.textContent = '☰';
+      
+      // Smooth scroll to section (mock behavior for demo)
+      if (sections[index] === 'packages') {
+        document.querySelector('.packages').scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      } else if (sections[index] === 'contact') {
+        document.querySelector('#contact-btn').scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'center'
+        });
+      } else {
+        // Scroll to top for other sections
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Header background opacity on scroll
+  let lastScrollY = window.scrollY;
+  
+  function updateHeader() {
+    const header = document.getElementById('header');
+    const currentScrollY = window.scrollY;
+    
+    if (currentScrollY > 50) {
+      header.style.background = 'rgba(20, 83, 45, 0.98)';
+      header.style.backdropFilter = 'blur(16px)';
+    } else {
+      header.style.background = 'rgba(20, 83, 45, 0.95)';
+      header.style.backdropFilter = 'blur(12px)';
+    }
+    
+    lastScrollY = currentScrollY;
+  }
+  
+  window.addEventListener('scroll', updateHeader, { passive: true });
+</script>
+
+</body>
+</html>
