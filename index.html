@@ -1,1026 +1,673 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MeteorX_ Minecraft Map Maker</title>
-<style>
-  /* Reset & basics */
-  * {
-    box-sizing: border-box;
-  }
-  body, html {
-    margin: 0; padding: 0; height: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(to bottom, #e0f2fe 0%, #bae6fd 50%, #fff 100%);
-    color: #134e4a;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    user-select: none;
-  }
-  /* Loader styles */
-  #loader {
-    position: fixed;
-    inset: 0;
-    background: linear-gradient(to bottom, #0f172a, #000000cc);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    color: #d1fae5;
-    font-weight: 700;
-    text-align: center;
-    padding: 2rem;
-  }
-  .block-cube {
-    width: 72px; height: 72px;
-    background: linear-gradient(135deg, #7bbf59, #5e8a3e);
-    border-radius: 8px;
-    animation: blockSpin 6s linear infinite;
-    margin-bottom: 1rem;
-    box-shadow:
-      inset 0 4px 0 rgba(255, 255, 255, 0.25),
-      0 8px 8px rgba(0, 0, 0, 0.3);
-    position: relative;
-  }
-  .block-cube::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    right: 2px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-  }
-  @keyframes blockSpin {
-    0% { transform: rotateX(0) rotateY(0) }
-    100% { transform: rotateX(360deg) rotateY(360deg) }
-  }
-  #loader h1 {
-    font-size: 2.5rem;
-    margin: 0 0 0.5rem 0;
-    text-shadow: 0 0 10px #a3f7b5;
-  }
-  #loader p {
-    margin: 0 0 2rem 0;
-    font-weight: 400;
-    font-size: 1rem;
-    color: #a7f3d0;
-  }
-  .progress-bar {
-    width: 320px;
-    height: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-    overflow: hidden;
-    box-shadow: 0 0 8px rgba(163, 247, 181, 0.6);
-    margin-bottom: 0.5rem;
-  }
-  .progress-bar > div {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(to right, #4ade80, #facc15);
-    border-radius: 9999px;
-    transition: width 0.3s ease-out;
-    box-shadow: 0 0 6px #a3f7b5;
-  }
-  #progress-text {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    color: #a7f3d0;
-    font-weight: 600;
-    width: 320px;
-  }
-
-  /* Pixel particles */
-  .pixel-p {
-    position: fixed;
-    width: 8px; height: 8px;
-    border-radius: 1px;
-    opacity: 0.9;
-    animation: pixelfall 6s linear infinite;
-    pointer-events: none;
-    mix-blend-mode: screen;
-    will-change: transform;
-    z-index: 1;
-  }
-  @keyframes pixelfall {
-    0% { transform: translateY(-10px) scale(1); opacity: 0 }
-    10% { opacity: 1 }
-    100% { transform: translateY(110vh) scale(0.6); opacity: 0 }
-  }
-
-  /* Magic cursor */
-  #magic-cursor {
-    position: fixed;
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 99999;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(circle at 30% 30%, rgba(140,255,180,0.95), rgba(30,115,75,0.15));
-    mix-blend-mode: screen;
-    transition: opacity 0.2s ease;
-    opacity: 0;
-  }
-  #magic-cursor.active {
-    opacity: 1;
-  }
-
-  /* Header & Navigation */
-  header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background: rgba(20, 83, 45, 0.95);
-    backdrop-filter: blur(12px);
-    border-bottom: 2px solid rgba(134, 239, 172, 0.3);
-    padding: 1rem 0;
-    transform: translateY(-100%);
-    transition: transform 0.5s ease;
-  }
-  header.visible {
-    transform: translateY(0);
-  }
-  
-  .header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 2rem;
-  }
-  
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #86efac;
-    font-weight: 900;
-    font-size: 1.5rem;
-    text-decoration: none;
-    text-shadow: 0 0 8px rgba(134, 239, 172, 0.6);
-  }
-  
-  .logo-cube {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(45deg, #7bbf59, #4ade80);
-    border-radius: 6px;
-    position: relative;
-    animation: logoFloat 3s ease-in-out infinite;
-    box-shadow: 
-      inset 0 2px 0 rgba(255, 255, 255, 0.3),
-      0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-  
-  .logo-cube::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    right: 2px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 3px;
-  }
-  
-  @keyframes logoFloat {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-3px) rotate(1deg); }
-  }
-
-  /* Bubble Navigation */
-  .bubble-nav {
-    display: flex;
-    gap: 0.5rem;
-    background: rgba(22, 163, 74, 0.15);
-    padding: 0.5rem;
-    border-radius: 50px;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(134, 239, 172, 0.2);
-    box-shadow: 0 8px 25px rgba(22, 163, 74, 0.3);
-  }
-  
-  .nav-bubble {
-    position: relative;
-    padding: 0.7rem 1.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 30px;
-    color: #d1fae5;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.9rem;
-    overflow: hidden;
-  }
-  
-  .nav-bubble::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.6s ease;
-  }
-  
-  .nav-bubble:hover {
-    background: rgba(134, 239, 172, 0.2);
-    border-color: rgba(134, 239, 172, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 
-      0 6px 15px rgba(22, 163, 74, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    color: #86efac;
-  }
-  
-  .nav-bubble:hover::before {
-    left: 100%;
-  }
-  
-  .nav-bubble.active {
-    background: linear-gradient(135deg, #16a34a, #22c55e);
-    border-color: #86efac;
-    color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    box-shadow: 
-      0 4px 12px rgba(22, 163, 74, 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-
-  /* Mobile menu toggle */
-  .mobile-toggle {
-    display: none;
-    background: none;
-    border: none;
-    color: #86efac;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 8px;
-    transition: background 0.3s ease;
-  }
-  
-  .mobile-toggle:hover {
-    background: rgba(134, 239, 172, 0.2);
-  }
-
-  @media (max-width: 768px) {
-    .header-content {
-      padding: 0 1rem;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MeteorX_ — Custom Minecraft Maps (Prijzen)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: 
+        linear-gradient(180deg, #071019 0%, #071827 35%, #07182b 100%),
+        radial-gradient(1200px 400px at 10% 10%, rgba(96,165,250,0.04), transparent 10%),
+        radial-gradient(1000px 300px at 90% 85%, rgba(110,231,183,0.03), transparent 15%);
+      background-attachment: fixed;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
     }
-    
-    .bubble-nav {
-      position: absolute;
-      top: 100%;
-      left: 1rem;
-      right: 1rem;
-      flex-direction: column;
-      gap: 0.3rem;
-      margin-top: 0.5rem;
-      opacity: 0;
-      transform: translateY(-10px);
-      visibility: hidden;
-      transition: all 0.3s ease;
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+      100% { transform: translateY(0px); }
     }
-    
-    .bubble-nav.open {
-      opacity: 1;
-      transform: translateY(0);
-      visibility: visible;
+
+    @keyframes floatBadge {
+      0% { transform: translateY(-2px); }
+      50% { transform: translateY(2px); }
+      100% { transform: translateY(-2px); }
     }
-    
-    .mobile-toggle {
+
+    @keyframes particleMove {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(150%, -200%) scale(0.6); opacity: 0; }
+    }
+
+    .animate-float { animation: float 3.2s ease-in-out infinite; }
+    .animate-float-badge { animation: floatBadge 3.4s ease-in-out infinite; }
+    .animate-particle { animation: particleMove 2.6s linear infinite; }
+
+    .hamburger {
       display: block;
+      width: 20px;
+      height: 2px;
+      background: currentColor;
+      transition: all 0.2s;
+      position: relative;
     }
-    
-    .nav-bubble {
-      text-align: center;
-      border-radius: 12px;
+
+    .hamburger::before,
+    .hamburger::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 2px;
+      background: currentColor;
+      transition: all 0.2s;
     }
-  }
 
-  /* Main content */
-  main {
-    max-width: 960px;
-    margin: 140px auto 80px;
-    padding: 0 1rem;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
-    min-height: 70vh;
-  }
-  main.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    .hamburger::before { top: -6px; }
+    .hamburger::after { top: 6px; }
 
-  h1 {
-    font-size: 3rem;
-    font-weight: 900;
-    line-height: 1.1;
-    color: #16a34a;
-    text-shadow: 0 0 6px #a7f3d0;
-    margin-bottom: 0.6rem;
-  }
-  @media (max-width: 600px) {
-    h1 {
-      font-size: 2.2rem;
-    }
-  }
-  
-  p.subtitle {
-    font-weight: 500;
-    max-width: 600px;
-    margin-bottom: 2rem;
-    color: #065f46;
-    font-size: 1.1rem;
-    line-height: 1.5;
-  }
+    .menu-btn.active .hamburger { background: transparent; }
+    .menu-btn.active .hamburger::before { transform: rotate(45deg); top: 0; }
+    .menu-btn.active .hamburger::after { transform: rotate(-45deg); top: 0; }
 
-  section.packages {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-  }
-  @media (max-width: 700px) {
-    section.packages {
-      grid-template-columns: 1fr;
-    }
-  }
-  article.package-card {
-    background: #dcfce7;
-    border: 2px solid #86efac;
-    border-radius: 16px;
-    padding: 1.5rem 2rem;
-    box-shadow: 0 6px 15px rgba(22, 163, 74, 0.25);
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease;
-    cursor: default;
-    position: relative;
-    overflow: hidden;
-  }
-  article.package-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #86efac, #4ade80);
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-  }
-  article.package-card:hover {
-    box-shadow: 0 8px 22px rgba(22, 163, 74, 0.5);
-    transform: translateY(-2px);
-  }
-  article.package-card:hover::before {
-    transform: scaleX(1);
-  }
-  article.package-card:focus {
-    outline: 2px solid #16a34a;
-    outline-offset: 2px;
-  }
-  article.package-card h3 {
-    font-size: 1.8rem;
-    color: #166534;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    user-select: text;
-  }
-  article.package-card ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex-grow: 1;
-    color: #14532d;
-    font-weight: 600;
-    font-size: 1.1rem;
-    user-select: text;
-  }
-  article.package-card ul li {
-    margin-bottom: 0.6rem;
-    padding-left: 1rem;
-    position: relative;
-  }
-  article.package-card ul li::before {
-    content: '■';
-    position: absolute;
-    left: 0;
-    color: #22c55e;
-    font-size: 0.8rem;
-    top: 0.1rem;
-  }
-
-  /* Super Detailed package - gold/yellow style */
-  article.package-card.super-detailed {
-    background: #fff7ed;
-    border-color: #fbbf24;
-    box-shadow: 0 6px 15px rgba(251, 191, 36, 0.3);
-  }
-  article.package-card.super-detailed::before {
-    background: linear-gradient(90deg, #fbbf24, #f59e0b);
-  }
-  article.package-card.super-detailed:hover {
-    box-shadow: 0 8px 22px rgba(251, 191, 36, 0.6);
-  }
-  article.package-card.super-detailed h3 {
-    color: #92400e;
-  }
-  article.package-card.super-detailed ul {
-    color: #451a03;
-  }
-  article.package-card.super-detailed ul li::before {
-    color: #f59e0b;
-  }
-
-  /* Info note */
-  #info-note {
-    max-width: 960px;
-    margin: 2rem auto 4rem;
-    padding: 1rem 1.5rem;
-    background: #d9f99d;
-    border-left: 6px solid #84cc16;
-    border-radius: 8px;
-    font-weight: 600;
-    color: #4d7c0f;
-    line-height: 1.6;
-  }
-
-  /* Button */
-  #contact-btn {
-    display: inline-block;
-    padding: 0.8rem 2.5rem;
-    background: linear-gradient(90deg, #22c55e, #bef264);
-    border-radius: 9999px;
-    font-weight: 800;
-    color: #14532d;
-    font-size: 1.2rem;
-    text-decoration: none;
-    box-shadow: 0 6px 12px rgba(139, 204, 15, 0.6);
-    transition: all 0.3s ease;
-    user-select: none;
-    position: relative;
-    overflow: hidden;
-  }
-  #contact-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    transition: left 0.5s ease;
-  }
-  #contact-btn:hover {
-    background: linear-gradient(90deg, #16a34a, #a3e635);
-    box-shadow: 0 8px 18px rgba(101, 163, 13, 0.9);
-    transform: translateY(-1px);
-  }
-  #contact-btn:hover::before {
-    left: 100%;
-  }
-  #contact-btn:active {
-    transform: scale(0.96) translateY(-1px);
-  }
-  #contact-btn:focus {
-    outline: 2px solid #16a34a;
-    outline-offset: 3px;
-  }
-
-  /* Loading states */
-  .fade-in {
-    animation: fadeIn 0.6s ease-out;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Footer */
-  footer {
-    background: linear-gradient(135deg, #14532d, #166534);
-    color: #d1fae5;
-    padding: 3rem 0 2rem;
-    margin-top: 4rem;
-    position: relative;
-    overflow: hidden;
-    border-top: 3px solid #22c55e;
-  }
-  
-  footer::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: repeating-linear-gradient(
-      90deg,
-      #22c55e 0px,
-      #22c55e 20px,
-      #16a34a 20px,
-      #16a34a 40px
-    );
-    animation: pixelBorder 3s linear infinite;
-  }
-  
-  @keyframes pixelBorder {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(40px); }
-  }
-  
-  .footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 2rem;
-  }
-  
-  @media (max-width: 768px) {
-    .footer-content {
-      grid-template-columns: 1fr;
-      text-align: center;
-      gap: 2.5rem;
-    }
-  }
-  
-  .footer-section h4 {
-    color: #86efac;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .footer-section h4::before {
-    content: '⬛';
-    color: #22c55e;
-    font-size: 0.8rem;
-  }
-  
-  .footer-section ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .footer-section ul li {
-    margin-bottom: 0.5rem;
-  }
-  
-  .footer-section ul li a {
-    color: #a7f3d0;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    padding: 0.3rem 0;
-    display: inline-block;
-  }
-  
-  .footer-section ul li a:hover {
-    color: #86efac;
-    transform: translateX(4px);
-    text-shadow: 0 0 8px rgba(134, 239, 172, 0.6);
-  }
-  
-  .footer-social {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-  
-  @media (max-width: 768px) {
-    .footer-social {
-      justify-content: center;
-    }
-  }
-  
-  .social-cube {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #16a34a, #22c55e);
-    border-radius: 12px;
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
-    box-shadow: 
-      0 4px 8px rgba(22, 163, 74, 0.4),
-      inset 0 2px 0 rgba(255, 255, 255, 0.2);
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .social-cube::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    right: 2px;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
-  }
-  
-  .social-cube:hover {
-    transform: translateY(-3px) rotate(5deg);
-    box-shadow: 
-      0 8px 20px rgba(22, 163, 74, 0.6),
-      inset 0 2px 0 rgba(255, 255, 255, 0.3);
-  }
-  
-  .footer-bottom {
-    text-align: center;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid rgba(134, 239, 172, 0.3);
-    color: #a7f3d0;
-    font-weight: 500;
-  }
-  
-  .footer-logo {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #86efac;
-    font-weight: 800;
-    margin-bottom: 1rem;
-  }
-  
-  .footer-logo-cube {
-    width: 24px;
-    height: 24px;
-    background: linear-gradient(45deg, #7bbf59, #4ade80);
-    border-radius: 4px;
-    position: relative;
-    box-shadow: 
-      inset 0 2px 0 rgba(255, 255, 255, 0.3),
-      0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-  
-  .footer-logo-cube::before {
-    content: '';
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    right: 1px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 2px;
-  }
-
-  /* Accessibility improvements */
-  @media (prefers-reduced-motion: reduce) {
-    .block-cube, .logo-cube {
-      animation: none;
-    }
-    .pixel-p {
-      animation: none;
+    .reveal {
       opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    footer::before {
-      animation: none;
+
+    .reveal.show { opacity: 1; transform: translateY(0); }
+    .delay-1 { transition-delay: 0.1s; }
+    .delay-2 { transition-delay: 0.2s; }
+    .delay-3 { transition-delay: 0.3s; }
+
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.3s;
     }
-    * {
-      transition: none !important;
+
+    .nav-link:hover::before { left: 100%; }
+
+    .super-glow {
+      background: radial-gradient(closest-side, rgba(96,165,250,0.12), transparent 50%);
+      filter: blur(10px);
+      opacity: 0;
+      transform: scale(0.96);
+      transition: all 0.3s;
     }
-  }
-</style>
-</head>
-<body>
 
-<div id="loader" aria-label="Laden van de pagina">
-  <div class="block-cube" aria-hidden="true"></div>
-  <h1>MeteorX_ Map Maker</h1>
-  <p>Minecraft World Painter & custom map builds — laad de magie...</p>
-  <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-    <div></div>
-  </div>
-  <div id="progress-text"><span>Loading assets</span><span>0%</span></div>
-</div>
-
-<div id="magic-cursor" aria-hidden="true"></div>
-
-<header id="header">
-  <div class="header-content">
-    <a href="#" class="logo" aria-label="MeteorX Map Maker Home">
-      <div class="logo-cube" aria-hidden="true"></div>
-      <span>MeteorX_</span>
-    </a>
-    
-    <nav class="bubble-nav" id="nav-menu">
-      <a href="#home" class="nav-bubble active">🏠 Home</a>
-      <a href="#packages" class="nav-bubble">📦 Pakketten</a>
-      <a href="#gallery" class="nav-bubble">🖼️ Galerij</a>
-      <a href="#about" class="nav-bubble">ℹ️ Over Mij</a>
-      <a href="#contact" class="nav-bubble">✉️ Contact</a>
-    </nav>
-    
-    <button class="mobile-toggle" id="mobile-toggle" aria-label="Menu toggle">
-      ☰
-    </button>
-  </div>
-</header>
-
-<main id="main-content" tabindex="-1" aria-label="Minecraft map maker inhoud" hidden>
-  <h1>Custom Minecraft maps met een magische vibe</h1>
-  <p class="subtitle">Van simpele biomes tot super gedetailleerde werelden, volledig in jouw stijl. Kies hieronder een pakket of vraag een offerte aan voor maatwerk.</p>
-
-  <section class="packages" aria-label="Pakketten en prijzen">
-    <article class="package-card standard" tabindex="0" aria-labelledby="standaard-title">
-      <h3 id="standaard-title">Standaard Pakketten</h3>
-      <ul>
-        <li>1K = €10</li>
-        <li>2K = €20</li>
-        <li>4K = €45</li>
-        <li>8K = Vanaf €150</li>
-        <li>10K = Vanaf €170</li>
-        <li>15K = Vanaf €220</li>
-      </ul>
-    </article>
-
-    <article class="package-card super-detailed" tabindex="0" aria-labelledby="super-title">
-      <h3 id="super-title">Super Gedetailleerd</h3>
-      <ul>
-        <li>1K = €15</li>
-        <li>2K = €30</li>
-        <li>4K = €60</li>
-        <li>8K = Vanaf €200</li>
-        <li>10K = Vanaf €220</li>
-        <li>15K = Vanaf €350</li>
-        <li>20K+ = €500 of meer</li>
-      </ul>
-    </article>
-  </section>
-
-  <div id="info-note" role="note">
-    Over deze prijzen is natuurlijk altijd te discussiëren en het hangt af van de complexiteit van de map en de layout wat je wil.<br>
-    Houd er rekening mee dat bij mappen groter dan 8K het best lang kan duren voor je de map hebt (vooral bij de gedetailleerde).<br>
-    Bij 15K & 20K+ kun je rekenen op een paar maanden in plaats van weken!<br>
-    Mocht je meerdere mappen kopen dan kan er zeker wat met de prijzen gespeeld worden.<br>
-    Voor meer details maak een ticket aan en dan zal ik je helpen.<br>
-    Groetjes, MeteorX_
-  </div>
-
-  <a href="https://discord.gg/wcaHR8DQqN" id="contact-btn" role="button" aria-label="Maak een ticket aan via discord">Maak een ticket aan</a>
-</main>
-
-<footer>
-  <div class="footer-content">
-    <div class="footer-section">
-      <div class="footer-logo">
-        <div class="footer-logo-cube" aria-hidden="true"></div>
-        <span>MeteorX_ Maps</span>
-      </div>
-      <p>Custom Minecraft werelden met een magische touch. Van simpele biomes tot complexe landschappen.</p>
-    </div>
-    
-    <div class="footer-section">
-      <h4>Services</h4>
-      <ul>
-        <li><a href="#packages">Standaard Pakketten</a></li>
-        <li><a href="#packages">Super Gedetailleerd</a></li>
-        <li><a href="#custom">Maatwerk Maps</a></li>
-        <li><a href="#world-painter">World Painter</a></li>
-        <li><a href="#terrain">Terrain Design</a></li>
-      </ul>
-    </div>
-    
-    <div class="footer-section">
-      <h4>Connect</h4>
-      <div class="footer-social">
-        <a href="#" class="social-cube" aria-label="Discord" title="Discord">D</a>
-        <a href="#" class="social-cube" aria-label="YouTube" title="YouTube">Y</a>
-        <a href="#" class="social-cube" aria-label="Twitter" title="Twitter">T</a>
-      </div>
-      <ul style="margin-top: 1rem;">
-        <li><a href="#support">Support & Help</a></li>
-        <li><a href="#faq">Veelgestelde Vragen</a></li>
-        <li><a href="#terms">Voorwaarden</a></li>
-      </ul>
-    </div>
-  </div>
-  
-  <div class="footer-bottom">
-    <p>&copy; 2025 MeteorX_ Map Maker. Alle rechten voorbehouden.</p>
-    <p>Handgemaakte Minecraft werelden met passie ⚡</p>
-  </div>
-</footer>
-
-<script>
-  // Check for reduced motion preference
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // Pixel particles creation
-  const colors = ['#7cc576', '#d1c27b', '#9ad6ff', '#b06b3b', '#e6e6e6'];
-  if (!prefersReducedMotion) {
-    for(let i = 0; i < 30; i++) {
-      const p = document.createElement('div');
-      p.className = 'pixel-p';
-      const size = 6 + Math.floor(Math.random() * 8);
-      p.style.width = size + 'px';
-      p.style.height = size + 'px';
-      p.style.left = (Math.random() * 100) + 'vw';
-      p.style.top = (-20 - Math.random() * 20) + 'vh';
-      p.style.background = colors[Math.floor(Math.random() * colors.length)];
-      p.style.animationDelay = (Math.random() * -6) + 's';
-      p.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
-      document.body.appendChild(p);
+    .super-card:hover .super-glow {
+      opacity: 1;
+      transform: scale(1.02);
     }
-  }
 
-  // Magic cursor movement with performance optimization
-  const cursor = document.getElementById('magic-cursor');
-  let isMoving = false;
-  let hideTimeout;
-
-  function updateCursor(e) {
-    if (!isMoving) {
-      cursor.classList.add('active');
-      isMoving = true;
-    }
-    
-    cursor.style.left = e.clientX + 'px';
-    cursor.style.top = e.clientY + 'px';
-    
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-      cursor.classList.remove('active');
-      isMoving = false;
-    }, 1000);
-  }
-
-  window.addEventListener('mousemove', updateCursor, { passive: true });
-
-  // Loader simulation with error handling
-  const loader = document.getElementById('loader');
-  const progressBar = loader.querySelector('.progress-bar > div');
-  const progressText = document.getElementById('progress-text').lastElementChild;
-  const progressBarContainer = loader.querySelector('.progress-bar');
-  const mainContent = document.getElementById('main-content');
-
-  let progress = 0;
-  const loadingSteps = [
-    'Loading assets',
-    'Preparing textures',
-    'Building worlds',
-    'Adding magic',
-    'Almost ready'
-  ];
-  let currentStep = 0;
-
-  const interval = setInterval(() => {
-    const increment = Math.floor(Math.random() * 7) + 3;
-    progress = Math.min(progress + increment, 100);
-    
-    // Update step text based on progress
-    const stepIndex = Math.floor((progress / 100) * loadingSteps.length);
-    if (stepIndex !== currentStep && stepIndex < loadingSteps.length) {
-      currentStep = stepIndex;
-      document.getElementById('progress-text').firstElementChild.textContent = loadingSteps[currentStep];
-    }
-    
-    // Update progress bar and text
-    progressBar.style.width = progress + '%';
-    progressBarContainer.setAttribute('aria-valuenow', progress);
-    progressText.textContent = progress + '%';
-    
-    if (progress >= 100) {
-      clearInterval(interval);
-      progressText.textContent = '100%';
-      document.getElementById('progress-text').firstElementChild.textContent = 'Ready!';
-      
-      setTimeout(() => {
-        loader.style.opacity = '0';
-        loader.style.transition = 'opacity 0.5s ease';
-        
-        setTimeout(() => {
-          loader.style.display = 'none';
-          mainContent.hidden = false;
-          mainContent.classList.add('visible');
-          mainContent.focus();
-          
-          // Add staggered animation to cards
-          const cards = document.querySelectorAll('.package-card');
-          cards.forEach((card, index) => {
-            setTimeout(() => {
-              card.classList.add('fade-in');
-            }, index * 150);
-          });
-        }, 500);
-      }, 600);
-    }
-  }, 200);
-
-  // Error handling for failed loads
-  window.addEventListener('error', (e) => {
-    console.error('Error loading resource:', e);
-  });
-
-  // Keyboard navigation improvements
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-      // Ensure focus is visible
-      document.body.classList.add('keyboard-navigation');
-    }
-  });
-
-  document.addEventListener('click', () => {
-    document.body.classList.remove('keyboard-navigation');
-  });
-
-  // Show header after loading
-  setTimeout(() => {
-    const header = document.getElementById('header');
-    header.classList.add('visible');
-  }, 1200);
-
-  // Mobile navigation toggle
-  const mobileToggle = document.getElementById('mobile-toggle');
-  const navMenu = document.getElementById('nav-menu');
-  
-  mobileToggle.addEventListener('click', () => {
-    navMenu.classList.toggle('open');
-    mobileToggle.textContent = navMenu.classList.contains('open') ? '✕' : '☰';
-  });
-
-  // Smooth scrolling and active nav updates
-  const navBubbles = document.querySelectorAll('.nav-bubble');
-  const sections = ['home', 'packages', 'gallery', 'about', 'contact'];
-
-  navBubbles.forEach((bubble, index) => {
-    bubble.addEventListener('click', (e) => {
-      e.preventDefault();
-      
-      // Update active state
-      navBubbles.forEach(b => b.classList.remove('active'));
-      bubble.classList.add('active');
-      
-      // Close mobile menu if open
-      navMenu.classList.remove('open');
-      mobileToggle.textContent = '☰';
-      
-      // Smooth scroll to section (mock behavior for demo)
-      if (sections[index] === 'packages') {
-        document.querySelector('.packages').scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'start'
-        });
-      } else if (sections[index] === 'contact') {
-        document.querySelector('#contact-btn').scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center'
-        });
-      } else {
-        // Scroll to top for other sections
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    @media (prefers-reduced-motion: reduce) {
+      *, .animate-float, .animate-float-badge, .animate-particle {
+        animation: none !important;
+        transition: none !important;
       }
-    });
-  });
-
-  // Header background opacity on scroll
-  let lastScrollY = window.scrollY;
-  
-  function updateHeader() {
-    const header = document.getElementById('header');
-    const currentScrollY = window.scrollY;
-    
-    if (currentScrollY > 50) {
-      header.style.background = 'rgba(20, 83, 45, 0.98)';
-      header.style.backdropFilter = 'blur(16px)';
-    } else {
-      header.style.background = 'rgba(20, 83, 45, 0.95)';
-      header.style.backdropFilter = 'blur(12px)';
+      .reveal { transform: none; opacity: 1; }
     }
-    
-    lastScrollY = currentScrollY;
-  }
-  
-  window.addEventListener('scroll', updateHeader, { passive: true });
-</script>
+  </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-slate-100 antialiased overflow-x-hidden">
 
+  <!-- HEADER -->
+  <div class="sticky top-3 z-50 flex justify-center pointer-events-none">
+    <header id="site-header" class="pointer-events-auto w-full max-w-6xl mx-4 flex items-center gap-4 px-5 py-3 rounded-full backdrop-blur-lg border shadow-2xl transition-all duration-300" style="background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); border-color: rgba(255,255,255,0.1);">
+      <div class="flex items-center gap-3">
+        <div id="logo-block" class="w-11 h-11 rounded-lg flex items-start justify-center p-2 relative cursor-pointer transition-all duration-500 hover:rotate-12 hover:scale-105" style="background: linear-gradient(135deg, #6ee7b7 0%, #16a34a 100%); box-shadow: 0 6px 14px rgba(16,74,40,0.34), inset 0 3px 0 rgba(255,255,255,0.18);">
+          <div class="absolute left-2 top-2 right-2 h-2 rounded" style="background: rgba(255,255,255,0.26);"></div>
+        </div>
+        <div>
+          <div class="font-extrabold text-lg tracking-wider" style="color: #6ee7b7;">MeteorX_ Maps</div>
+          <div class="font-semibold text-sm" style="color: #94a3b8;">Custom Minecraft Maps</div>
+        </div>
+      </div>
+
+      <nav id="topnav" class="hidden md:flex items-center gap-2 ml-auto">
+        <a href="#prijzen" class="nav-link relative px-4 py-2 rounded-full text-slate-100 font-semibold text-sm transition-all duration-200 overflow-hidden hover:-translate-y-1 hover:text-slate-900 hover:shadow-lg" style="border: 1px solid transparent;" onmouseover="this.style.background='linear-gradient(90deg, #6ee7b7, #34d399)'" onmouseout="this.style.background='transparent'">Prijzen</a>
+        <a href="#info" class="nav-link relative px-4 py-2 rounded-full text-slate-100 font-semibold text-sm transition-all duration-200 overflow-hidden hover:-translate-y-1 hover:text-slate-900 hover:shadow-lg" style="border: 1px solid transparent;" onmouseover="this.style.background='linear-gradient(90deg, #6ee7b7, #34d399)'" onmouseout="this.style.background='transparent'">Info</a>
+        <a href="#discord" class="nav-link relative px-4 py-2 rounded-full text-slate-100 font-semibold text-sm transition-all duration-200 overflow-hidden hover:-translate-y-1 hover:text-slate-900 hover:shadow-lg" style="border: 1px solid transparent;" onmouseover="this.style.background='linear-gradient(90deg, #6ee7b7, #34d399)'" onmouseout="this.style.background='transparent'">Discord</a>
+        <a href="https://discord.gg/WCMZcKpY55" target="_blank" rel="noopener" class="ml-2 px-4 py-2 rounded-full font-extrabold border-0 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-xl" style="background: linear-gradient(90deg, #60a5fa, #3b82f6); color: #041124;">Join Discord</a>
+      </nav>
+
+      <button id="menuBtn" class="menu-btn md:hidden ml-2 bg-transparent border-0 text-slate-100 text-xl p-2 rounded-lg cursor-pointer transition-all duration-200 hover:bg-white hover:bg-opacity-5 hover:scale-105 active:scale-95" aria-expanded="false">
+        <span class="hamburger"></span>
+      </button>
+    </header>
+  </div>
+
+  <!-- MOBILE NAV OVERLAY -->
+  <div id="mobileNavOverlay" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm opacity-0 invisible transition-all duration-300 z-40"></div>
+
+  <!-- MOBILE NAV -->
+  <nav id="mobileNav" class="fixed -right-full top-0 bottom-0 w-80 max-w-[85vw] shadow-2xl p-7 z-50 transition-all duration-300 overflow-y-auto" style="background: linear-gradient(180deg, #071022, #071827);" aria-hidden="true">
+    <div class="flex flex-col gap-5 h-full">
+      <button id="mobileNavClose" class="self-end bg-transparent border-0 text-slate-100 text-2xl p-2 cursor-pointer rounded-lg transition-all duration-200 hover:bg-white hover:bg-opacity-5 hover:scale-110">×</button>
+      <a href="#prijzen" class="text-slate-100 no-underline font-bold text-lg p-3 rounded-xl transition-all duration-200 border border-transparent hover:bg-white hover:bg-opacity-5 hover:border-white hover:border-opacity-10 hover:translate-x-1">Prijzen</a>
+      <a href="#info" class="text-slate-100 no-underline font-bold text-lg p-3 rounded-xl transition-all duration-200 border border-transparent hover:bg-white hover:bg-opacity-5 hover:border-white hover:border-opacity-10 hover:translate-x-1">Info</a>
+      <a href="#discord" class="text-slate-100 no-underline font-bold text-lg p-3 rounded-xl transition-all duration-200 border border-transparent hover:bg-white hover:bg-opacity-5 hover:border-white hover:border-opacity-10 hover:translate-x-1">Discord</a>
+      <a href="https://discord.gg/WCMZcKpY55" target="_blank" rel="noopener" class="font-extrabold mt-2 text-center p-3 rounded-xl" style="background: linear-gradient(90deg, #60a5fa, #3b82f6); color: #041124;">Join Discord</a>
+      <hr class="border-none h-px bg-white bg-opacity-5 my-4">
+      <p class="text-sm" style="color: #94a3b8;">Welkom! Dit is de plek om custom Minecraft maps te bestellen of te laten zien.</p>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="max-w-6xl mx-auto mt-7 p-5">
+    <section class="reveal grid md:grid-cols-[1fr_360px] gap-6 items-stretch">
+      <div class="rounded-2xl p-7 border shadow-2xl transition-all duration-300 hover:-translate-y-1" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.1);">
+        <h1 class="m-0 text-4xl leading-tight" style="color: #6ee7b7;">Custom Minecraft maps — gemaakt met passie</h1>
+        <p class="mt-3 text-lg" style="color: #94a3b8;">Van simpele biomes tot extreem gedetailleerde landschappen. Bekijk hieronder onze pakketten — kies snel of vraag een ticket aan voor maatwerk.</p>
+        <div class="mt-3 flex gap-3 flex-wrap">
+          <a href="#prijzen" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-extrabold border-0 cursor-pointer shadow-lg transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-xl no-underline" style="background: linear-gradient(90deg, #6ee7b7, #34d399); color: #041124;">Bekijk prijzen</a>
+          <a href="https://discord.gg/WCMZcKpY55" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-extrabold border-0 cursor-pointer shadow-lg transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-xl no-underline" style="background: linear-gradient(90deg, #60a5fa, #3b82f6); color: #041124;">Maak ticket</a>
+        </div>
+      </div>
+
+      <aside class="rounded-xl p-5 border flex flex-col gap-3 items-center justify-center transition-all duration-300 hover:-translate-y-1" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.1);">
+        <div class="text-center">
+          <div class="w-28 h-28 mx-auto mb-2 animate-float">
+            <svg viewBox="0 0 64 64" class="w-full h-full">
+              <rect x="4" y="4" width="56" height="56" rx="6" ry="6" fill="#5c9b41"/>
+              <rect x="6" y="6" width="24" height="12" fill="#7dd36b"/>
+              <rect x="34" y="6" width="24" height="12" fill="#69c56a"/>
+              <rect x="4" y="22" width="56" height="36" fill="#5b3d2d"/>
+              <rect x="8" y="30" width="8" height="8" fill="#6e4a34"/>
+              <rect x="28" y="34" width="10" height="8" fill="#6d4a36"/>
+            </svg>
+          </div>
+          <div class="font-extrabold" style="color: #6ee7b7;">Handmade Minecraft worlds</div>
+          <div class="mt-2 text-sm" style="color: #94a3b8;">Orders: 1K → 20K+. Voor grotere mappen: overleg.</div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- PRICES -->
+    <section id="prijzen" class="reveal delay-1 mt-6">
+      <h2 class="text-center text-2xl font-bold mb-6" style="color: #6ee7b7;">Prijslijst — Custom Maps</h2>
+
+      <div class="grid md:grid-cols-2 gap-5">
+        <!-- NORMAL / LEFT PANEL -->
+        <div class="reveal delay-2 rounded-xl p-5 border" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06);">
+          <div class="flex items-center gap-3 mb-3">
+            <svg width="36" height="36" viewBox="0 0 64 64">
+              <rect x="2" y="2" rx="8" width="60" height="60" fill="#6ee7b7"/>
+            </svg>
+            <div>
+              <h3 class="m-0 text-xl" style="color: #6ee7b7;">Normale Mappen</h3>
+              <div class="text-sm" style="color: #94a3b8;">Snelle builds, nette kwaliteit</div>
+            </div>
+          </div>
+
+          <!-- Standard Package Overview -->
+          <article class="reveal delay-3 rounded-2xl p-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer mb-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border-color: rgba(255,255,255,0.06);">
+            <h3 class="m-0 mb-4 text-xl font-bold" style="color: #6ee7b7;">Standaard Pakketten - Overzicht</h3>
+            <ul class="list-none p-0 m-0 grid gap-2">
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                <span class="font-bold" style="color: #6ee7b7;">1K</span>
+                <span class="font-extrabold text-white">€10</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                <span class="font-bold" style="color: #6ee7b7;">2K</span>
+                <span class="font-extrabold text-white">€20</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                <span class="font-bold" style="color: #6ee7b7;">4K</span>
+                <span class="font-extrabold text-white">€45</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                <span class="font-bold" style="color: #6ee7b7;">8K</span>
+                <span class="font-extrabold text-white">Vanaf €150</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                <span class="font-bold" style="color: #6ee7b7;">10K</span>
+                <span class="font-extrabold text-white">Vanaf €170</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04);">
+                <span class="font-bold" style="color: #6ee7b7;">15K</span>
+                <span class="font-extrabold text-white">Vanaf €220</span>
+              </li>
+            </ul>
+          </article>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="rounded-xl p-3 text-center relative border-2 transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:border-opacity-20" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <rect x="6" y="6" rx="6" width="52" height="52" fill="#67b86b"/>
+                  <rect x="8" y="8" width="20" height="10" fill="#8fe4a3"/>
+                  <rect x="30" y="8" width="26" height="10" fill="#74d388"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100">1K</h4>
+              <p class="m-0 font-extrabold text-lg" style="color: #6ee7b7;">€10</p>
+              <p class="mt-1 font-semibold text-sm" style="color: #94a3b8;">Basis kaart</p>
+            </div>
+
+            <div class="rounded-xl p-3 text-center relative border-2 transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:border-opacity-20" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <rect x="6" y="6" rx="6" width="52" height="52" fill="#67b86b"/>
+                  <rect x="8" y="8" width="20" height="10" fill="#8fe4a3"/>
+                  <rect x="30" y="8" width="26" height="10" fill="#74d388"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100">2K</h4>
+              <p class="m-0 font-extrabold text-lg" style="color: #6ee7b7;">€20</p>
+              <p class="mt-1 font-semibold text-sm" style="color: #94a3b8;">Grotere regio</p>
+            </div>
+
+            <div class="rounded-xl p-3 text-center relative border-2 transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:border-opacity-20" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <rect x="6" y="6" rx="6" width="52" height="52" fill="#67b86b"/>
+                  <rect x="8" y="8" width="20" height="10" fill="#8fe4a3"/>
+                  <rect x="30" y="8" width="26" height="10" fill="#74d388"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100">4K</h4>
+              <p class="m-0 font-extrabold text-lg" style="color: #6ee7b7;">€45</p>
+              <p class="mt-1 font-semibold text-sm" style="color: #94a3b8;">Populaire keuze</p>
+            </div>
+
+            <div class="rounded-xl p-3 text-center relative border-2 transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:border-opacity-20" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <rect x="6" y="6" rx="6" width="52" height="52" fill="#67b86b"/>
+                  <rect x="8" y="8" width="20" height="10" fill="#8fe4a3"/>
+                  <rect x="30" y="8" width="26" height="10" fill="#74d388"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100">8K</h4>
+              <p class="m-0 font-extrabold text-lg" style="color: #6ee7b7;">vanaf €150</p>
+              <p class="mt-1 font-semibold text-sm" style="color: #94a3b8;">Grote wereld — langere levertijd</p>
+              <div class="absolute top-2 right-2 px-2 py-1 rounded-lg font-extrabold text-xs shadow-lg animate-float-badge z-20" style="background: linear-gradient(90deg, #fde68a, #f59e0b); color: #2b1a00; transform: translateY(-4px);">vanaf</div>
+            </div>
+
+            <div class="rounded-xl p-3 text-center relative border-2 transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:border-opacity-20" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <rect x="6" y="6" rx="6" width="52" height="52" fill="#67b86b"/>
+                  <rect x="8" y="8" width="20" height="10" fill="#8fe4a3"/>
+                  <rect x="30" y="8" width="26" height="10" fill="#74d388"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100">10K</h4>
+              <p class="m-0 font-extrabold text-lg" style="color: #6ee7b7;">vanaf €170</p>
+              <p class="mt-1 font-semibold text-sm" style="color: #94a3b8;">Extra detail mogelijk</p>
+            </div>
+
+            <div class="rounded-xl p-3 text-center relative border-2 transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:border-opacity-20" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <rect x="6" y="6" rx="6" width="52" height="52" fill="#67b86b"/>
+                  <rect x="8" y="8" width="20" height="10" fill="#8fe4a3"/>
+                  <rect x="30" y="8" width="26" height="10" fill="#74d388"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100">15K</h4>
+              <p class="m-0 font-extrabold text-lg" style="color: #6ee7b7;">vanaf €220</p>
+              <p class="mt-1 font-semibold text-sm" style="color: #94a3b8;">Zeer grote builds</p>
+            </div>
+          </div>
+
+          <div class="mt-3 p-4 rounded-xl border" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-color: rgba(255,255,255,0.02); color: #94a3b8;">
+            <strong>Opmerking:</strong> Prijzen zijn richtprijzen — afhankelijk van complexiteit en layout. Bij 8K+ mappen kunnen levertijden oplopen: bij 15K/20K+ reken op weken → maanden.
+          </div>
+        </div>
+
+        <!-- SUPER / RIGHT PANEL -->
+        <div class="reveal delay-3 rounded-xl p-5 border" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06);">
+          <div class="flex items-center gap-3 mb-3">
+            <svg width="36" height="36" viewBox="0 0 64 64">
+              <rect x="2" y="2" rx="8" width="60" height="60" fill="#60a5fa"/>
+            </svg>
+            <div>
+              <h3 class="m-0 text-xl" style="color: #60a5fa;">Super Gedetailleerd</h3>
+              <div class="text-sm" style="color: #94a3b8;">High-end builds — realtime handwerk</div>
+            </div>
+          </div>
+
+          <!-- Super Detailed Package Overview -->
+          <article class="reveal delay-3 rounded-2xl p-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer mb-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border-color: rgba(96,165,250,0.18);">
+            <h3 class="m-0 mb-4 text-xl font-bold" style="color: #60a5fa;">Super Gedetailleerd - Overzicht</h3>
+            <ul class="list-none p-0 m-0 grid gap-2">
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">1K</span>
+                <span class="font-extrabold text-white">€15</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">2K</span>
+                <span class="font-extrabold text-white">€30</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">4K</span>
+                <span class="font-extrabold text-white">€60</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">8K</span>
+                <span class="font-extrabold text-white">Vanaf €200</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">10K</span>
+                <span class="font-extrabold text-white">Vanaf €220</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">15K</span>
+                <span class="font-extrabold text-white">Vanaf €350</span>
+              </li>
+              <li class="p-2 rounded-lg font-semibold text-slate-100 border transition-all duration-200 flex justify-between items-center hover:shadow-lg" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); box-shadow: 0 4px 12px rgba(96,165,250,0.1);">
+                <span class="font-bold" style="color: #60a5fa;">20K+</span>
+                <span class="font-extrabold text-white">€500 of meer</span>
+              </li>
+            </ul>
+          </article>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 18%; top: 76%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">1K</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">€15</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Extra details & polishing</p>
+            </div>
+
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 34%; top: 88%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">2K</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">€30</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Meer verfijning</p>
+            </div>
+
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 58%; top: 92%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">4K</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">€60</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Veel vakwerk</p>
+            </div>
+
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 16%; top: 34%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">8K</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">vanaf €200</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Zwaar detail — lange levertijd</p>
+              <div class="absolute top-2 right-2 px-2 py-1 rounded-lg font-extrabold text-xs shadow-lg animate-float-badge z-20" style="background: linear-gradient(90deg, #fde68a, #f59e0b); color: #2b1a00; transform: translateY(-4px);">vanaf</div>
+            </div>
+
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 66%; top: 72%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">10K</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">vanaf €220</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Very elaborate</p>
+            </div>
+
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 44%; top: 46%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">15K</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">vanaf €350</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Massive handwork</p>
+            </div>
+
+            <div class="super-card rounded-xl p-3 text-center relative border-2 shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-2 hover:shadow-xl overflow-hidden" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(96,165,250,0.18); box-shadow: 0 6px 28px rgba(59,130,246,0.06);">
+              <div class="super-glow absolute -inset-1.5 rounded-xl pointer-events-none"></div>
+              <div class="particle absolute w-1.5 h-1.5 bg-blue-400 rounded-sm opacity-0 shadow-sm animate-particle pointer-events-none" style="left: 28%; top: 64%; box-shadow: 0 0 8px rgba(96,165,250,0.5);"></div>
+              <div class="w-16 h-16 mx-auto mb-2 grid place-items-center relative z-10">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="animate-float">
+                  <path d="M32 6 L50 24 L32 58 L14 24 Z" fill="#9be7ff" stroke="#68c0ff" stroke-width="1"/>
+                  <path d="M32 6 L32 28 L50 24 Z" fill="#cfefff" opacity="0.18"/>
+                </svg>
+              </div>
+              <h4 class="my-1 text-lg text-slate-100 relative z-10">20K+</h4>
+              <p class="m-0 font-extrabold text-lg relative z-10" style="color: #60a5fa;">vanaf €500</p>
+              <p class="mt-1 font-semibold text-sm relative z-10" style="color: #94a3b8;">Projecten — neem contact op</p>
+              <div class="absolute top-2 right-2 px-2 py-1 rounded-lg font-extrabold text-xs shadow-lg animate-float-badge z-20" style="background: linear-gradient(90deg, #fde68a, #f59e0b); color: #2b1a00; transform: translateY(-4px);">project</div>
+            </div>
+          </div>
+
+          <div class="mt-3 p-4 rounded-xl border" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-color: rgba(255,255,255,0.02); color: #94a3b8;">
+            <strong>Let op:</strong> Super gedetailleerde mappen vragen veel handwerk; levertijden kunnen bij 15K/20K+ oplopen tot meerdere maanden. Als je meerdere mappen wilt bestellen: vraag gerust korting of pakketprijs.
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal delay-2 mt-4 max-w-4xl">
+        <div class="p-4 rounded-xl border" style="background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-color: rgba(255,255,255,0.02); color: #94a3b8;">
+          <p><strong>Over deze prijzen:</strong> de lijst hierboven zijn gemiddelde richtprijzen. Complexiteit van terrain, gebouwen en speciale mechanics (redstone, custom structures, schematics) beïnvloeden prijs en levertijd.</p>
+          <p class="mt-2">Heb je vragen of wil je maatwerk? Maak een ticket aan via Discord en vermeld mapgrootte, gewenste stijl en referentiebeelden.</p>
+          <p class="mt-2 mb-0">Groet, <em>MeteorX_ — de mapmeneer</em></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DISCORD CTA -->
+    <section id="discord" class="reveal delay-3 mt-4">
+      <h2 class="text-center text-2xl font-bold mb-4" style="color: #60a5fa;">Join onze Discord</h2>
+      <div class="flex flex-col md:flex-row gap-3 items-center justify-between p-4 rounded-xl border transition-all duration-300 hover:-translate-y-1" style="background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(255,255,255,0.03);">
+        <div class="text-center md:text-left">
+          <strong class="text-lg block">Bedankt voor het joinen — welkom!</strong>
+          <p class="my-2 text-sm" style="color: #94a3b8;">Deze community is voor kopers, makers en mappers die hun werk willen delen of kaarten willen kopen. Respect & hulp staat voorop.</p>
+          <p class="m-0 text-xs" style="color: #94a3b8;">Ps. tag me gerust als het wat langer duurt — ik reageer soms vertraagd.</p>
+        </div>
+        <div class="flex flex-col gap-2 items-center md:items-end">
+          <a href="https://discord.gg/WCMZcKpY55" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg font-extrabold no-underline transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-xl" style="background: linear-gradient(90deg, #60a5fa, #3b82f6); color: #041124;">Discord Invite</a>
+          <a href="#prijzen" class="px-3 py-2 rounded-lg font-extrabold no-underline text-sm transition-all duration-200 hover:-translate-y-1 hover:scale-105" style="background: linear-gradient(90deg, #6ee7b7, #34d399); color: #041124;">Vraag offerte</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    class SiteOptimizer {
+      constructor() {
+        this.header = document.getElementById('site-header');
+        this.logoBlock = document.getElementById('logo-block');
+        this.menuBtn = document.getElementById('menuBtn');
+        this.mobileNav = document.getElementById('mobileNav');
+        this.mobileNavOverlay = document.getElementById('mobileNavOverlay');
+        this.mobileNavClose = document.getElementById('mobileNavClose');
+        this.mobileOpen = false;
+        this.prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.ticking = false;
+        
+        this.init();
+      }
+
+      init() {
+        this.setupScrollHandler();
+        this.setupMobileNav();
+        this.setupRevealAnimations();
+        this.setupAccessibility();
+        this.setupSuperCardEffects();
+      }
+
+      setupScrollHandler() {
+        const updateScroll = () => {
+          const scrollY = window.scrollY;
+          
+          if (scrollY > 18) {
+            this.header.style.transform = 'translateY(-2px) scale(0.99)';
+            this.header.style.boxShadow = '0 12px 40px rgba(2,6,10,0.8)';
+          } else {
+            this.header.style.transform = 'translateY(0) scale(1)';
+            this.header.style.boxShadow = '0 6px 30px rgba(4,8,12,0.6)';
+          }
+
+          if (!this.prefersReduced && this.logoBlock) {
+            const t = Math.min(scrollY / 400, 0.6);
+            this.logoBlock.style.transform = `rotate(${t * 15}deg) translateY(${t * -2}px)`;
+          }
+          
+          this.ticking = false;
+        };
+
+        const handleScroll = () => {
+          if (!this.ticking) {
+            requestAnimationFrame(updateScroll);
+            this.ticking = true;
+          }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+      }
+
+      setupMobileNav() {
+        const toggleMobile = (open) => {
+          this.mobileOpen = open;
+          this.menuBtn.setAttribute('aria-expanded', String(open));
+          this.menuBtn.classList.toggle('active', open);
+          
+          if (open) {
+            document.body.style.overflow = 'hidden';
+            this.mobileNavOverlay.classList.remove('opacity-0', 'invisible');
+            this.mobileNavOverlay.classList.add('opacity-100');
+            this.mobileNav.classList.remove('-right-full');
+            this.mobileNav.classList.add('right-0');
+            this.mobileNav.setAttribute('aria-hidden', 'false');
+            
+            setTimeout(() => {
+              this.mobileNavClose.focus();
+            }, 100);
+          } else {
+            document.body.style.overflow = '';
+            this.mobileNavOverlay.classList.add('opacity-0', 'invisible');
+            this.mobileNavOverlay.classList.remove('opacity-100');
+            this.mobileNav.classList.add('-right-full');
+            this.mobileNav.classList.remove('right-0');
+            this.mobileNav.setAttribute('aria-hidden', 'true');
+          }
+        };
+
+        this.menuBtn.addEventListener('click', () => toggleMobile(!this.mobileOpen));
+        this.mobileNavClose.addEventListener('click', () => toggleMobile(false));
+        this.mobileNavOverlay.addEventListener('click', () => toggleMobile(false));
+
+        this.mobileNav.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', () => toggleMobile(false));
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && this.mobileOpen) {
+            toggleMobile(false);
+            this.menuBtn.focus();
+          }
+        });
+      }
+
+      setupRevealAnimations() {
+        const observerOptions = {
+          threshold: 0.15,
+          rootMargin: '0px 0px -50px 0px'
+        };
+
+        const revealObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('show');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach((el) => {
+          revealObserver.observe(el);
+        });
+      }
+
+      setupAccessibility() {
+        const skipLink = document.createElement('a');
+        skipLink.href = '#prijzen';
+        skipLink.textContent = 'Skip to main content';
+        skipLink.className = 'absolute left-2 px-2 py-1 no-underline rounded z-50 transition-all duration-300';
+        skipLink.style.cssText = `
+          top: -40px;
+          background: #6ee7b7;
+          color: #041124;
+        `;
+        skipLink.addEventListener('focus', () => { skipLink.style.top = '6px'; });
+        skipLink.addEventListener('blur', () => { skipLink.style.top = '-40px'; });
+        document.body.insertBefore(skipLink, document.body.firstChild);
+      }
+
+      setupSuperCardEffects() {
+        if (this.prefersReduced) return;
+        
+        const superCards = document.querySelectorAll('.super-card');
+        
+        superCards.forEach((card) => {
+          const glow = card.querySelector('.super-glow');
+          const particles = card.querySelectorAll('.particle');
+          
+          card.addEventListener('mouseenter', () => {
+            if (glow) {
+              glow.style.opacity = '1';
+              glow.style.transform = 'scale(1.02)';
+            }
+            particles.forEach(particle => {
+              particle.style.opacity = '1';
+            });
+          });
+
+          card.addEventListener('mouseleave', () => {
+            if (glow) {
+              glow.style.opacity = '0';
+              glow.style.transform = 'scale(0.96)';
+            }
+            particles.forEach(particle => {
+              particle.style.opacity = '0';
+            });
+          });
+        });
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => new SiteOptimizer());
+    } else {
+      new SiteOptimizer();
+    }
+  </script>
 </body>
 </html>
